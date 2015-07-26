@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="JoystickView">
+        <attr name="showOuterBorder" format="boolean"></attr>
+        <attr name="outerBorderWidth" format="dimension"></attr>
+        <attr name="outerBorderColor" format="color"></attr>
+        <attr name="showCross" format="boolean"></attr>
+        <attr name="crossWidth" format="dimension"></attr>
+        <attr name="crossColor" format="color"></attr>
+        <attr name="stickSize" format="dimension"></attr>
+        <attr name="stickColor" format="color"></attr>
+        <attr name="stickInnerColor" format="color"></attr>
+        <attr name="stickUseGradient" format="boolean"></attr>
+        <attr name="stickGradientOuterColor" format="color"></attr>
+        <attr name="stickGradientInnerColor" format="color"></attr>
+        <attr name="showStickBorder" format="boolean"></attr>
+        <attr name="stickBorderWidth" format="dimension"></attr>
+        <attr name="stickBorderColor" format="color"></attr>
+    </declare-styleable>
+
+</resources>
