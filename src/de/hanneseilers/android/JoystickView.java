@@ -8,9 +8,9 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
+import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import de.hanneseilers.joystick.R;
@@ -23,47 +23,47 @@ import de.hanneseilers.joystick.R;
  */
 public class JoystickView extends View {
 	
+	// Orientation Values
+	public final static int ORIENTATION_NORTH = 0;
+	public final static int ORIENTATION_NORTH_EAST = 1;
+	public final static int ORIENTATION_EAST = 2;
+	public final static int ORIENTATION_SOUTH_EAST = 3;
+	public final static int ORIENTATION_SOUTH = 4;
+	public final static int ORIENTATION_SOUT_WEST = 5;
+	public final static int ORIENTATION_WEST = 6;
+	public final static int ORIENTATION_NORTH_WEST = 7;
+	
 	// Attributes
-	private boolean mShowOuterBorder;
-	private float mOuterBorderWidth;
-	private int mOuterBorderColor;
-	private boolean mShowCross;
-	private float mCrossWidth;
-	private int mCrossColor;
+	private boolean mShowOuterBorder, mShowCross, mStickUseGradient, mShowStickBorder;
+	private boolean mInvertXAxis, mInvertYAxis;
+	private float mOuterBorderWidth, mCrossWidth, mStickBorderWidth;
 	private float mStickSize;
-	private int mStickColor;
-	private int mStickInnerColor;
-	private boolean mStickUseGradient;
-	private int mStickGradientOuterColor;
-	private int mStickGradientInnerColor;
-	private boolean mShowStickBorder;
-	private float mStickBorderWidth;
-	private int mStickBorderColor;
-	private boolean mInvertXAxis;
-	private boolean mInvertYAxis;
-	private int mBackgroundStyle;
+	
+	private int mOuterBorderColor, mCrossColor;	
+	private int mStickColor, mStickBorderColor, mStickInnerColor;
+	private int mStickGradientOuterColor, mStickGradientInnerColor;
 	private int mBackgroundColor;
+	
+	private int mBackgroundStyle;	
 	
 	// Drawing objects
 	private Paint mPaintBackground;
-	private Paint mPaintOuterBorder;
-	private Paint mPaintStickBorder;
+	private Paint mPaintOuterBorder, mPaintStickBorder;
 	private Paint mPaintCross;
-	private Paint mPaintStickCircle;
-	private Paint mPaintStickInnerCircle;
+	private Paint mPaintStickCircle, mPaintStickInnerCircle;
 	
 	// Dimensions
-	private float mViewCenterX;
-	private float mViewCenterY;
+	private float mViewCenterX, mViewCenterY;
 	private float mOuterBorderRadius;	
 	private float[] mCrossLines;
-	private float mStickCenterX;
-	private float mStickCenterY;
-	private float mStickRadius;
+	private float mStickCenterX, mStickCenterY;
+	private float mStickRadius, mStickInnerCircleRadius;
 	private Shader mStickCircleShader;
-	private float mStickInnerCircleRadius;
 	
-	// Gesture listening objects
+	// Active touch pointer
+	private int mActivePointer = MotionEvent.INVALID_POINTER_ID;
+	
+	// Listeners
 	
 
 	/**
@@ -206,8 +206,95 @@ public class JoystickView extends View {
 	
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {		
-		// TODO
+		final int vAction = MotionEventCompat.getActionMasked(event);
+		int vPointerIndex;
+		float xPos;
+		float yPos;
+		
+		switch(vAction){
+		case MotionEvent.ACTION_DOWN:			
+			// get touch position
+			vPointerIndex = MotionEventCompat.getActionIndex(event);
+			xPos = MotionEventCompat.getX(event, vPointerIndex);
+			yPos = MotionEventCompat.getY(event, vPointerIndex);
+			
+			// calculate distance to stick
+			float vRadiusToStick = (float) Math.sqrt(
+					Math.pow(xPos - mStickCenterX, 2)
+					+ Math.pow(yPos - mStickCenterY, 2) );
+			
+			// check if touch is in stick radius (+10%)
+			if( vRadiusToStick <= (mStickRadius + 0.1*mStickRadius) ){
+				// set pointer active and move stick
+				mActivePointer = MotionEventCompat.getPointerId(event, vPointerIndex);
+				setStickCenter(xPos, yPos);
+			}
+			
+			break;
+			
+		case MotionEvent.ACTION_MOVE:
+			// check if move is active
+			if( mActivePointer != MotionEvent.INVALID_POINTER_ID ){
+				
+				// get current pointer position and move stick
+				vPointerIndex = MotionEventCompat.findPointerIndex(event, mActivePointer);
+				xPos = MotionEventCompat.getX(event, vPointerIndex);
+				yPos = MotionEventCompat.getY(event, vPointerIndex);
+				
+				setStickCenter(xPos, yPos);
+				
+			}
+			break;
+			
+		case MotionEvent.ACTION_UP:
+			mActivePointer = MotionEvent.INVALID_POINTER_ID;
+			setStickCenter(mViewCenterX, mViewCenterY);
+			break;
+			
+		case MotionEvent.ACTION_CANCEL:
+			mActivePointer = MotionEvent.INVALID_POINTER_ID;
+			break;
+			
+		case MotionEvent.ACTION_POINTER_UP:			
+			vPointerIndex = MotionEventCompat.getActionIndex(event);
+			
+			if( MotionEventCompat.getPointerId(event, vPointerIndex) == mActivePointer ){			
+				mActivePointer = MotionEvent.INVALID_POINTER_ID;
+				setStickCenter(mViewCenterX, mViewCenterY);
+			}
+			break;
+		}
+		
+		
 		return true;
+	}
+	
+	/**
+	 * Sets the position of the stick.
+	 * If the new stick position is outside the outer border circle,
+	 * the position will be adjusted to be inside the outer border circle.
+	 * @param centerX	X position of stick center.
+	 * @param centerY	Y position of stick center.
+	 */
+	private void setStickCenter(float centerX, float centerY){
+		// calculate radius to view center
+		float vX = centerX - mViewCenterX;
+		float vY = centerY - mViewCenterY;
+		float vDist = (float) Math.sqrt(
+				Math.pow(vX, 2) + Math.pow(vY, 2));
+		
+		// check if new stick position is outside cotrol radius
+		if( vDist > mOuterBorderRadius ){
+			// adjust position
+			float vScale = mOuterBorderRadius / vDist;
+			centerX = mViewCenterX + vScale * vX;
+			centerY = mViewCenterY + vScale * vY;
+		}
+		
+		// set new stick position
+		mStickCenterX = centerX;
+		mStickCenterY = centerY;
+		invalidate();
 	}
 	
 
@@ -375,6 +462,15 @@ public class JoystickView extends View {
 
 	public void setInvertYAxis(boolean aInvertYAxis) {
 		mInvertYAxis = aInvertYAxis;
+	}
+	
+	/**
+	 * Interface for listening to {@link JoystickView} position changes.
+	 * @author H. Eilers
+	 *
+	 */
+	public interface JoystickPositionChangedListener{
+		public void onJoyStickPositionChanged(float x, float y, int orientation);
 	}
 
 }
