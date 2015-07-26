@@ -17,6 +17,8 @@
         <attr name="showStickBorder" format="boolean"></attr>
         <attr name="stickBorderWidth" format="dimension"></attr>
         <attr name="stickBorderColor" format="color"></attr>
+        <attr name="invertXAxis" format="boolean"></attr>
+        <attr name="invertYAxis" format="boolean"></attr>
     </declare-styleable>
 
 </resources>
