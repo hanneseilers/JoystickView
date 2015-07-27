@@ -37,7 +37,7 @@ public class JoystickView extends View {
 	private int mBackgroundColor;
 	
 	private int mBackgroundStyle;	
-	private int mPositionAccurency;
+	private int mPositionPrecision;
 	
 	// Drawing objects
 	private Paint mPaintBackground;
@@ -103,7 +103,7 @@ public class JoystickView extends View {
 			mBackgroundStyle = vAttr.getInt(R.styleable.JoystickView_backgroundStyle, 0);
 			mBackgroundColor = vAttr.getColor(R.styleable.JoystickView_backgroundColor, Color.BLACK);
 			
-			mPositionAccurency = vAttr.getInt(R.styleable.JoystickView_positionAccurency, 2);
+			mPositionPrecision = vAttr.getInt(R.styleable.JoystickView_positionPrecision, 2);
 			
 		} finally {
 			vAttr.recycle();
@@ -307,7 +307,7 @@ public class JoystickView extends View {
 			centerY = -1.0f * centerY;
 		
 		// round position and scale from -100% to 100%
-		float vAccurency = (float) Math.pow(10, mPositionAccurency);
+		float vAccurency = (float) Math.pow(10, mPositionPrecision);
 		centerX = Math.round( centerX * 100.0f * vAccurency ) / vAccurency;
 		centerY = Math.round( centerY * 100.0f * vAccurency ) / vAccurency;
 		
@@ -563,12 +563,12 @@ public class JoystickView extends View {
 		mInvertYAxis = aInvertYAxis;
 	}
 	
-	public int getPositionAccurency(){
-		return mPositionAccurency;
+	public int getPositionPrecision(){
+		return mPositionPrecision;
 	}
 	
-	public void setPositionAccurency(int aPositionAccurency){
-		mPositionAccurency = aPositionAccurency;
+	public void setPositionPrecision(int aPositionPrecision){
+		mPositionPrecision = aPositionPrecision;
 	}
 	
 	/**
