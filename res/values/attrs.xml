@@ -24,6 +24,7 @@
             <enum name="fill" value="1" />
         </attr>
         <attr name="backgroundColor" format="color" />
+        <attr name="positionAccurency" format="integer" />
     </declare-styleable>
 
 </resources>

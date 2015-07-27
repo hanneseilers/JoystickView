@@ -1,5 +1,8 @@
 package de.hanneseilers.android;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
@@ -23,16 +26,6 @@ import de.hanneseilers.joystick.R;
  */
 public class JoystickView extends View {
 	
-	// Orientation Values
-	public final static int ORIENTATION_NORTH = 0;
-	public final static int ORIENTATION_NORTH_EAST = 1;
-	public final static int ORIENTATION_EAST = 2;
-	public final static int ORIENTATION_SOUTH_EAST = 3;
-	public final static int ORIENTATION_SOUTH = 4;
-	public final static int ORIENTATION_SOUT_WEST = 5;
-	public final static int ORIENTATION_WEST = 6;
-	public final static int ORIENTATION_NORTH_WEST = 7;
-	
 	// Attributes
 	private boolean mShowOuterBorder, mShowCross, mStickUseGradient, mShowStickBorder;
 	private boolean mInvertXAxis, mInvertYAxis;
@@ -45,6 +38,7 @@ public class JoystickView extends View {
 	private int mBackgroundColor;
 	
 	private int mBackgroundStyle;	
+	private int mPositionAccurency;
 	
 	// Drawing objects
 	private Paint mPaintBackground;
@@ -63,7 +57,12 @@ public class JoystickView extends View {
 	// Active touch pointer
 	private int mActivePointer = MotionEvent.INVALID_POINTER_ID;
 	
+	// Relative position and orientation
+	private float mStickRelativeXPos, mStickRelativeYPos;
+	private StickOrientation mStickOrientation;
+	
 	// Listeners
+	List<OnPositionChangedListener> mOnPositionChangedListeners = new ArrayList<OnPositionChangedListener>();
 	
 
 	/**
@@ -102,8 +101,10 @@ public class JoystickView extends View {
 			mInvertXAxis = vAttr.getBoolean(R.styleable.JoystickView_invertXAxis, false);
 			mInvertYAxis = vAttr.getBoolean(R.styleable.JoystickView_invertYAxis, false);
 			
-			mBackgroundStyle = vAttr.getInteger(R.styleable.JoystickView_backgroundStyle, 0);
+			mBackgroundStyle = vAttr.getInt(R.styleable.JoystickView_backgroundStyle, 0);
 			mBackgroundColor = vAttr.getColor(R.styleable.JoystickView_backgroundColor, Color.BLACK);
+			
+			mPositionAccurency = vAttr.getInt(R.styleable.JoystickView_positionAccurency, 2);
 			
 		} finally {
 			vAttr.recycle();
@@ -163,7 +164,7 @@ public class JoystickView extends View {
 		mStickInnerCircleRadius = mStickRadius * 0.6f;
 		
 		mStickCircleShader = new RadialGradient(
-				mViewCenterX, mViewCenterY, mStickRadius,
+				mStickCenterX, mStickCenterY, mStickRadius,
 				mStickGradientInnerColor, mStickGradientOuterColor,
 				Shader.TileMode.MIRROR );
 		mPaintStickCircle.setShader( mStickCircleShader );
@@ -295,8 +296,100 @@ public class JoystickView extends View {
 		mStickCenterX = centerX;
 		mStickCenterY = centerY;
 		invalidate();
+		
+		// Calculte new relative stick position
+		centerX = (centerX - mViewCenterX) / mOuterBorderRadius;
+		centerY = (centerY - mViewCenterY) / mOuterBorderRadius;
+		
+		// Check if to invert axis
+		if( mInvertXAxis )
+			centerX = -1.0f * centerX;
+		if( !mInvertYAxis )				// android view direction is from top to bottom!
+			centerY = -1.0f * centerY;
+		
+		// round position and scale from -100% to 100%
+		float vAccurency = (float) Math.pow(10, mPositionAccurency);
+		centerX = Math.round( centerX * 100.0f * vAccurency ) / vAccurency;
+		centerY = Math.round( centerY * 100.0f * vAccurency ) / vAccurency;
+		
+		mStickRelativeXPos = centerX;
+		mStickRelativeYPos = centerY;
+		
+		// get orientation
+		StickOrientation vOrientation = StickOrientation.NONE;
+		if( mStickRelativeXPos == 0.0f && mStickRelativeYPos > 0.0f )
+			vOrientation = StickOrientation.NORTH;
+		else if( mStickRelativeXPos > 0.0f && mStickRelativeYPos > 0.0f )
+			vOrientation = StickOrientation.NORTH_EAST;
+		else if( mStickRelativeXPos > 0.0f && mStickRelativeYPos == 0.0f )
+			vOrientation = StickOrientation.EAST;
+		else if( mStickRelativeXPos > 0.0f && mStickRelativeYPos < 0.0f )
+			vOrientation = StickOrientation.SOUTH_EAST;
+		else if( mStickRelativeXPos == 0.0f && mStickRelativeYPos < 0.0f )
+			vOrientation = StickOrientation.SOUTH;
+		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos < 0.0f )
+			vOrientation = StickOrientation.SOUT_WEST;
+		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos == 0.0f )
+			vOrientation = StickOrientation.SOUT_WEST;
+		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos > 0.0f )
+			vOrientation = StickOrientation.NORTH_WEST;
+		
+		mStickOrientation = vOrientation;
+		
+		// notify listener
+		notifyOnPositionChangedListener();
 	}
 	
+	/**
+	 * Registers a {@link OnPositionChangedListener}.
+	 * @param listener	{@link OnPositionChangedListener} to register.
+	 */
+	public void setOnPositionChangedListener(OnPositionChangedListener listener){
+		if( !mOnPositionChangedListeners.contains(listener) )
+			mOnPositionChangedListeners.add(listener);
+	}
+	
+	/**
+	 * Removes a registered {@link OnPositionChangedListener}.
+	 * @param listener	{@link OnPositionChangedListener} to remove.
+	 */
+	public void removeOnPositionChangedListener(OnPositionChangedListener listener){
+		mOnPositionChangedListeners.remove(listener);
+	}
+	
+	/**
+	 * Notifies registered {@link OnPositionChangedListener} about new
+	 * joystick position.
+	 */
+	private void notifyOnPositionChangedListener(){		
+		for( OnPositionChangedListener vListener : mOnPositionChangedListeners ){
+			(new Thread( new PositionChangedNotifier(
+					getXPosition(), getYPosition(), getOrientation(), vListener) )).start();
+		}
+		
+	}
+	
+	/**
+	 * @return	{@link Float} stick x position in range of -100% to 100%.
+	 */
+	public float getXPosition(){
+		return mStickRelativeXPos;
+	}
+	
+	/**
+	 * @return	{@link Float} stick y position in range of -100% to 100%.
+	 */
+	public float getYPosition(){
+		return mStickRelativeYPos;
+	}
+	
+	/**
+	 * @return	{@link Integer} stick orientation.
+	 * 			See {@link JoystickView} ORIENTATION_ attributes for reference.
+	 */
+	public StickOrientation getOrientation(){
+		return mStickOrientation;
+	}
 
 	public boolean isOuterBorder() {
 		return mShowOuterBorder;
@@ -464,13 +557,65 @@ public class JoystickView extends View {
 		mInvertYAxis = aInvertYAxis;
 	}
 	
+	public int getPositionAccurency(){
+		return mPositionAccurency;
+	}
+	
+	public void setPositionAccurency(int aPositionAccurency){
+		mPositionAccurency = aPositionAccurency;
+	}
+	
 	/**
 	 * Interface for listening to {@link JoystickView} position changes.
 	 * @author H. Eilers
 	 *
 	 */
-	public interface JoystickPositionChangedListener{
-		public void onJoyStickPositionChanged(float x, float y, int orientation);
+	public interface OnPositionChangedListener{
+		public void onJoyStickPositionChanged(float x, float y, StickOrientation orientation);
+	}
+	
+	/**
+	 * {@link Runnable} implementation class to
+	 * notify a {@link OnPositionChangedListener} about a new
+	 * joystick position.
+	 * @author H. Eilers
+	 *
+	 */
+	private class PositionChangedNotifier implements Runnable{
+		private OnPositionChangedListener mListener;
+		private float mXPos;
+		private float mYPos;
+		private StickOrientation mOrientation;
+		
+		public PositionChangedNotifier(float x, float y, StickOrientation orientation, OnPositionChangedListener listener) {
+			mXPos = x;
+			mYPos = y;
+			mOrientation = orientation;
+			mListener = listener;
+		}
+		
+		@Override
+		public void run() {
+			mListener.onJoyStickPositionChanged(mXPos, mYPos, mOrientation);
+		}
+		
+	}
+	
+	/**
+	 * {@link JoystickView} orientations.
+	 * @author H. Eilers
+	 *
+	 */
+	public enum StickOrientation{
+		NONE,
+		NORTH,
+		NORTH_EAST,
+		EAST,
+		SOUTH_EAST,
+		SOUTH,
+		SOUT_WEST,
+		WEST,
+		NORTH_WEST
 	}
 
 }
