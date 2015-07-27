@@ -13,7 +13,6 @@ import android.graphics.RadialGradient;
 import android.graphics.Shader;
 import android.support.v4.view.MotionEventCompat;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import de.hanneseilers.joystick.R;
@@ -59,7 +58,7 @@ public class JoystickView extends View {
 	
 	// Relative position and orientation
 	private float mStickRelativeXPos, mStickRelativeYPos;
-	private StickOrientation mStickOrientation;
+	private StickOrientation mStickOrientation = StickOrientation.NONE;
 	
 	// Listeners
 	List<OnPositionChangedListener> mOnPositionChangedListeners = new ArrayList<OnPositionChangedListener>();
@@ -330,7 +329,7 @@ public class JoystickView extends View {
 		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos < 0.0f )
 			vOrientation = StickOrientation.SOUT_WEST;
 		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos == 0.0f )
-			vOrientation = StickOrientation.SOUT_WEST;
+			vOrientation = StickOrientation.WEST;
 		else if( mStickRelativeXPos < 0.0f && mStickRelativeYPos > 0.0f )
 			vOrientation = StickOrientation.NORTH_WEST;
 		
@@ -384,8 +383,8 @@ public class JoystickView extends View {
 	}
 	
 	/**
-	 * @return	{@link Integer} stick orientation.
-	 * 			See {@link JoystickView} ORIENTATION_ attributes for reference.
+	 * @return	{@link StickOrientation} stick orientation.
+	 * 			See {@link StickOrientation} enum in {@link JoystickView} class for reference.
 	 */
 	public StickOrientation getOrientation(){
 		return mStickOrientation;
@@ -417,6 +416,7 @@ public class JoystickView extends View {
 
 	public void setOuterBorderColor(int aOuterBorderColor) {
 		mOuterBorderColor = aOuterBorderColor;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -437,6 +437,7 @@ public class JoystickView extends View {
 
 	public void setCrossWidth(float aCrossWidth) {
 		mCrossWidth = aCrossWidth;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -447,6 +448,7 @@ public class JoystickView extends View {
 
 	public void setCrossColor(int aCrossColor) {
 		mCrossColor = aCrossColor;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -467,6 +469,7 @@ public class JoystickView extends View {
 
 	public void setStickColor(int aStickColor) {
 		mStickColor = aStickColor;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -477,6 +480,7 @@ public class JoystickView extends View {
 
 	public void setStickInnerColor(int aStickInnerColor) {
 		mStickInnerColor = aStickInnerColor;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -527,6 +531,7 @@ public class JoystickView extends View {
 
 	public void setStickBorderWidth(float aStickBorderWidth) {
 		mStickBorderWidth = aStickBorderWidth;
+		init();
 		invalidate();
 		requestLayout();
 	}
@@ -537,6 +542,7 @@ public class JoystickView extends View {
 
 	public void setStickBorderColor(int aStickBorderColor) {
 		mStickBorderColor = aStickBorderColor;
+		init();
 		invalidate();
 		requestLayout();
 	}
