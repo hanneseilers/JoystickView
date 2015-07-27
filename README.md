@@ -52,3 +52,8 @@ You can change attributes of the JoystickView using xml inside your layout file 
 * mShowStickBorder: Set true to show a border around the views stick (default: true)
 * mStickBorderWidth: Width of the sticks border (default: 1.0)
 * mStickBorderColor: Color if sticks border (default: Color.DKGRAY)
+* invertXAxis: Invert direction of X-Axis. Normal direction is from left to right (default: false)
+* invertYAxis: invert direction of Y_Axis. Normal direction is from bottom to top (default: false)
+* backgroundStyle: Background of views circle area. Could be none or fill (default: none)
+* backgroundColor: Background color if views circle area (default: Color.BLACK)
+* positionPrecision: Integer of internal decimal places for precision of stick position (default: 2)
